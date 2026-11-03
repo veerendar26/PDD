@@ -1,0 +1,22 @@
+# ──────────────────────────────────────────────
+# EcoFix Android — local.properties template
+# Copy to android/local.properties (NOT committed to git)
+# ──────────────────────────────────────────────
+
+# Android SDK path (set by Android Studio automatically)
+sdk.dir=C\:\\Users\\YourName\\AppData\\Local\\Android\\Sdk
+
+# Supabase — from your project's API settings
+supabase.url=https://your-project.supabase.co
+supabase.anonKey=your-anon-key
+
+# Razorpay — test or live key ID
+razorpay.keyId=rzp_test_XXXXXXXXXXXXXXXXXX
+
+# Google Maps Platform API key
+mapsApiKey=AIzaSy...
+
+# ─── Local development ───────────────────────
+# For Supabase CLI local dev:
+#   supabase.url=http://10.0.2.2:54321   (emulator)
+#   supabase.url=http://192.168.x.x:54321 (physical device)

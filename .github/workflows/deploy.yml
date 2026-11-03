@@ -1,0 +1,295 @@
+name: "CI/CD Pipeline - Automated Testing, Reports & GitHub Pages Deployment"
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # =========================================================================
+  # 1. SELENIUM WEB TESTING (351+ Unique Test Cases)
+  # =========================================================================
+  selenium-tests:
+    name: "Selenium Web Tests"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Source Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Python 3.11"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: "Install Python Testing Dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+
+      - name: "Setup Node.js 20"
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: "Install Web Application Dependencies"
+        working-directory: ./web
+        run: |
+          npm ci || npm install
+
+      - name: "Start Web Application (Background Server)"
+        working-directory: ./web
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: "https://gqfomovqomoxspsuvsso.supabase.co"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder"
+        run: |
+          npm run dev &
+          npx wait-on http://localhost:3000 --timeout 60000 || sleep 10
+
+      - name: "Execute 360 Selenium Web Tests"
+        env:
+          BASE_URL: "http://localhost:3000"
+        run: |
+          python tests/selenium/test_selenium.py
+
+      - name: "Archive Selenium Reports & Test Cases"
+        uses: actions/upload-artifact@v4
+        with:
+          name: selenium-test-artifacts
+          path: |
+            reports/selenium/
+            test-cases/selenium_test_cases.*
+          retention-days: 14
+
+  # =========================================================================
+  # 2. APPIUM MOBILE TESTING (351+ Unique Test Cases)
+  # =========================================================================
+  appium-tests:
+    name: "Appium Mobile Tests"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Source Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Python 3.11"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: "Install Python Testing Dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+
+      - name: "Execute 360 Appium Mobile Tests"
+        run: |
+          python tests/appium/test_appium.py
+
+      - name: "Archive Appium Reports & Test Cases"
+        uses: actions/upload-artifact@v4
+        with:
+          name: appium-test-artifacts
+          path: |
+            reports/appium/
+            test-cases/appium_test_cases.*
+          retention-days: 14
+
+  # =========================================================================
+  # 3. PERFORMANCE & LOAD TESTING (350+ Unique Scenarios)
+  # =========================================================================
+  load-tests:
+    name: "Load Tests (Web Only)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Source Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Python 3.11"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: "Install Python Testing Dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+
+      - name: "Execute 352 Load & Scalability Tests"
+        env:
+          BASE_URL: "http://localhost:3000"
+        run: |
+          python tests/load/run_load_test.py
+
+      - name: "Archive Load Reports & Test Cases"
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-artifacts
+          path: |
+            reports/load/
+            test-cases/load_test_cases.*
+          retention-days: 14
+
+  # =========================================================================
+  # 4. DAST SECURITY TESTING (350+ Unique Security Scenarios)
+  # =========================================================================
+  dast-security-tests:
+    name: "DAST Security Tests"
+    needs: [selenium-tests, appium-tests, load-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Source Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Python 3.11"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: "Install Python Testing Dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+
+      - name: "Execute 352 DAST Security Probes"
+        env:
+          BASE_URL: "http://localhost:3000"
+        run: |
+          python tests/dast/run_dast_test.py
+
+      - name: "Archive DAST Reports & Test Cases"
+        uses: actions/upload-artifact@v4
+        with:
+          name: dast-test-artifacts
+          path: |
+            reports/dast/
+            test-cases/dast_test_cases.*
+          retention-days: 14
+
+  # =========================================================================
+  # 5. BUNDLE REPORTS & QUALITY SUMMARY
+  # =========================================================================
+  bundle-reports:
+    name: "Bundle Reports"
+    needs: [selenium-tests, appium-tests, load-tests, dast-security-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Source Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Python 3.11"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: "Install Reporting Dependencies"
+        run: |
+          pip install openpyxl pandas requests
+
+      - name: "Download Selenium Artifacts"
+        uses: actions/download-artifact@v4
+        with:
+          name: selenium-test-artifacts
+          path: ./temp-artifacts/selenium
+
+      - name: "Download Appium Artifacts"
+        uses: actions/download-artifact@v4
+        with:
+          name: appium-test-artifacts
+          path: ./temp-artifacts/appium
+
+      - name: "Download Load Artifacts"
+        uses: actions/download-artifact@v4
+        with:
+          name: load-test-artifacts
+          path: ./temp-artifacts/load
+
+      - name: "Download DAST Artifacts"
+        uses: actions/download-artifact@v4
+        with:
+          name: dast-test-artifacts
+          path: ./temp-artifacts/dast
+
+      - name: "Organize Consolidated Report Directories"
+        run: |
+          mkdir -p reports/selenium reports/appium reports/load reports/dast test-cases
+          cp -r temp-artifacts/selenium/reports/* reports/ 2>/dev/null || true
+          cp -r temp-artifacts/selenium/test-cases/* test-cases/ 2>/dev/null || true
+          cp -r temp-artifacts/appium/reports/* reports/ 2>/dev/null || true
+          cp -r temp-artifacts/appium/test-cases/* test-cases/ 2>/dev/null || true
+          cp -r temp-artifacts/load/reports/* reports/ 2>/dev/null || true
+          cp -r temp-artifacts/load/test-cases/* test-cases/ 2>/dev/null || true
+          cp -r temp-artifacts/dast/reports/* reports/ 2>/dev/null || true
+          cp -r temp-artifacts/dast/test-cases/* test-cases/ 2>/dev/null || true
+
+      - name: "Generate Master Excel & HTML Reports"
+        run: |
+          python bundle_reports.py
+
+      - name: "Archive Consolidated Reports"
+        uses: actions/upload-artifact@v4
+        with:
+          name: consolidated-quality-reports
+          path: |
+            reports/
+            test-cases/
+          retention-days: 30
+
+  # =========================================================================
+  # 6. DEPLOY WEB ONLY TO GITHUB PAGES
+  # =========================================================================
+  deploy:
+    name: "Deploy Web Only (GitHub Pages)"
+    needs: [bundle-reports]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: "Checkout Source Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Python 3.11"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: "Download Consolidated Quality Reports"
+        uses: actions/download-artifact@v4
+        with:
+          name: consolidated-quality-reports
+          path: ./
+
+      - name: "Assemble Web Pages Distribution"
+        run: |
+          python scripts/prepare_pages.py
+
+      - name: "Configure GitHub Pages"
+        uses: actions/configure-pages@v5
+
+      - name: "Upload GitHub Pages Artifact"
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "./gh-pages"
+
+      - name: "Deploy to GitHub Pages"
+        id: deployment
+        uses: actions/deploy-pages@v4
+

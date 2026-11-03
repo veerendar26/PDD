@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand colours — match the web design tokens exactly -->
+    <color name="brand_500">#10B981</color>
+    <color name="brand_600">#059669</color>
+    <color name="brand_700">#047857</color>
+    <color name="brand_900">#064E3B</color>
+
+    <color name="surface0">#0A0F1A</color>
+    <color name="surface100">#1E293B</color>
+    <color name="surface200">#334155</color>
+    <color name="surface300">#475569</color>
+
+    <color name="text_primary">#F1F5F9</color>
+    <color name="text_secondary">#94A3B8</color>
+    <color name="text_muted">#64748B</color>
+
+    <color name="warning">#F59E0B</color>
+    <color name="danger">#F87171</color>
+    <color name="info">#60A5FA</color>
+    <color name="purple">#C084FC</color>
+</resources>
