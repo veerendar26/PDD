@@ -36,11 +36,12 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
+          cache-dependency-path: "requirements.txt"
 
       - name: "Install Python Testing Dependencies"
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-test.txt
+          pip install -r requirements.txt
 
       - name: "Setup Node.js 20"
         uses: actions/setup-node@v4
@@ -91,11 +92,12 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
+          cache-dependency-path: "requirements.txt"
 
       - name: "Install Python Testing Dependencies"
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-test.txt
+          pip install -r requirements.txt
 
       - name: "Execute 360 Appium Mobile Tests"
         run: |
@@ -125,11 +127,12 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
+          cache-dependency-path: "requirements.txt"
 
       - name: "Install Python Testing Dependencies"
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-test.txt
+          pip install -r requirements.txt
 
       - name: "Execute 352 Load & Scalability Tests"
         env:
@@ -162,11 +165,12 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
+          cache-dependency-path: "requirements.txt"
 
       - name: "Install Python Testing Dependencies"
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-test.txt
+          pip install -r requirements.txt
 
       - name: "Execute 352 DAST Security Probes"
         env:
@@ -292,4 +296,3 @@ jobs:
       - name: "Deploy to GitHub Pages"
         id: deployment
         uses: actions/deploy-pages@v4
-
